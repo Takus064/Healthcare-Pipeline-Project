@@ -1,0 +1,130 @@
+# =========================
+# I. CONFIG DATAPROC
+# =========================
+CLUSTER_NAME="healthcare-cluster"
+PROJECT_ID="project-435d5696-162f-4a35-98d"
+REGION="asia-southeast1"
+DATAPROC_SA_NAME="dataproc-sa"
+DATAPROC_SA_EMAIL="${DATAPROC_SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
+DATAPROC_PG_JAR="gs://healthcare-bucket-thangvd/jar/postgresql-42.7.3.jar"
+
+# =========================
+# CREATE SERVICE ACCOUNT
+# =========================
+gcloud iam service-accounts create ${DATAPROC_SA_NAME} \
+  --project=${PROJECT_ID} \
+  --display-name="Dataproc Service Account"
+
+# =========================
+# GRANT IAM ROLES
+# =========================
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+  --member="serviceAccount:${DATAPROC_SA_EMAIL}" \
+  --role="roles/dataproc.worker"
+
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+  --member="serviceAccount:${DATAPROC_SA_EMAIL}" \
+  --role="roles/storage.objectViewer"
+
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+  --member="serviceAccount:${DATAPROC_SA_EMAIL}" \
+  --role="roles/bigquery.jobUser"
+
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+  --member="serviceAccount:${DATAPROC_SA_EMAIL}" \
+  --role="roles/bigquery.dataViewer"
+
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+  --member="serviceAccount:${DATAPROC_SA_EMAIL}" \
+  --role="roles/bigquery.dataEditor"
+
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+  --member="serviceAccount:${DATAPROC_SA_EMAIL}" \
+  --role="roles/cloudsql.client"
+
+gcloud services enable cloudresourcemanager.googleapis.com \
+  --project=${PROJECT_ID}
+
+# =========================
+# CREATE DATAPROC CLUSTER
+# =========================
+gcloud dataproc clusters create "${CLUSTER_NAME}" \
+  --project="${PROJECT_ID}" \
+  --region="${REGION}" \
+  --master-machine-type="n4-standard-2" \
+  --master-boot-disk-size="100GB" \
+  --num-workers="2" \
+  --worker-machine-type="n4-standard-2" \
+  --worker-boot-disk-size="100GB" \
+  --image-version="2.3-debian12" \
+  --enable-component-gateway \
+  --optional-components="JUPYTER" \
+  --scopes="https://www.googleapis.com/auth/cloud-platform" \
+  --service-account="${DATAPROC_SA_EMAIL}" \
+  --properties=^###^\
+spark:spark.jars=${DATAPROC_PG_JAR}###\
+spark:spark.dynamicAllocation.enabled=true###\
+spark:spark.shuffle.service.enabled=true###\
+spark:spark.dynamicAllocation.minExecutors=0###\
+spark:spark.dynamicAllocation.initialExecutors=1###\
+spark:spark.dynamicAllocation.maxExecutors=2###\
+spark:spark.executor.cores=1###\
+spark:spark.executor.memory=2g###\
+spark:spark.executor.memoryOverhead=512m###\
+spark:spark.dynamicAllocation.schedulerBacklogTimeout=1s###\
+spark:spark.dynamicAllocation.sustainedSchedulerBacklogTimeout=5s###\
+spark:spark.dynamicAllocation.executorIdleTimeout=60s
+
+# =========================
+# DESCRIBE DATAPROC CLUSTER
+# =========================
+gcloud dataproc clusters describe ${CLUSTER_NAME} \
+  --region=${REGION} \
+  --project=${PROJECT_ID}
+
+
+# =========================
+# II. CONFIG AIRFLOW
+# =========================
+PROJECT_ID="project-435d5696-162f-4a35-98d"
+REGION="asia-southeast1"
+AIRFLOW_SA_NAME="airflow-sa"
+AIRFLOW_SA_EMAIL="${AIRFLOW_SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
+
+# =========================
+# CREATE SERVICE ACCOUNT
+# =========================
+gcloud iam service-accounts create ${AIRFLOW_SA_NAME} \
+  --project=${PROJECT_ID} \
+  --display-name="Airflow Service Account"
+
+# =========================
+# GRANT IAM ROLES
+# =========================
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${AIRFLOW_SA_EMAIL}" \
+  --role="roles/composer.worker"
+
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${AIRFLOW_SA_EMAIL}" \
+  --role="roles/bigquery.jobUser"
+
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${AIRFLOW_SA_EMAIL}" \
+  --role="roles/bigquery.dataEditor"
+
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${AIRFLOW_SA_EMAIL}" \
+  --role="roles/bigquery.dataViewer"
+
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${AIRFLOW_SA_EMAIL}" \
+  --role="roles/dataproc.editor"
+
+gcloud iam service-accounts add-iam-policy-binding "${DATAPROC_SA_EMAIL}" \
+  --member="serviceAccount:${AIRFLOW_SA_EMAIL}" \
+  --role="roles/iam.serviceAccountUser"
+
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+  --member="serviceAccount:${AIRFLOW_SA_EMAIL}" \
+  --role="roles/storage.objectViewer"
