@@ -4,8 +4,8 @@ hospital_a_db,hospital_a,patients,Incremental,ModifiedDate,1,hospital_a_db
 hospital_a_db,hospital_a,transactions,Incremental,ModifiedDate,1,hospital_a_db
 hospital_a_db,hospital_a,providers,Full,,1,hospital_a_db
 hospital_a_db,hospital_a,departments,Full,,1,hospital_a_db
-hospital_b_db,hospital_b,encounters,Incremental,ModifiedDate,1,hospital_b_db
-hospital_b_db,hospital_b,patients,Incremental,ModifiedDate,1,hospital_b_db
-hospital_b_db,hospital_b,transactions,Incremental,ModifiedDate,1,hospital_b_db
-hospital_b_db,hospital_b,providers,Full,,1,hospital_b_db
-hospital_b_db,hospital_b,departments,Full,,1,hospital_b_db
+hospital_b,hospital_b,encounters,Incremental,ModifiedDate,1,hospital_b_db
+hospital_b,hospital_b,patients,Incremental,ModifiedDate,1,hospital_b_db
+hospital_b,hospital_b,transactions,Incremental,ModifiedDate,1,hospital_b_db
+hospital_b,hospital_b,providers,Full,,1,hospital_b_db
+hospital_b,hospital_b,departments,Full,,1,hospital_b_db
