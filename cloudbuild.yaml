@@ -19,7 +19,7 @@ steps:
       - '-d'
       - '-r'
       - 'src/'
-      - 'gs://${_COMPOSER_BUCKET}/scripts/'
+      - 'gs://${_COMPOSER_BUCKET}/data/'
 
 # Giải thích tham số:
 # -m: Chạy song song cho nhanh
