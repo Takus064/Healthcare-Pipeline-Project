@@ -202,14 +202,16 @@ def extract_and_save_to_landing(datasource, table, load_type, watermark_col):
         # Tính record count trước
         record_count = df.count()
 
-        bucket = storage_client.bucket(BUCKET_NAME)
-        blob = bucket.blob(json_file_path)
-        blob.upload_from_string(
-            df.toPandas().to_json(orient='records', lines=True),
-            content_type='application/json'
-        )
-
-        log_event("SUCCESS", f"Data saved to Cloud Storage at {json_file_path}", datasource, table)
+        if record_count > 0:
+            bucket = storage_client.bucket(BUCKET_NAME)
+            blob = bucket.blob(json_file_path)
+            blob.upload_from_string(
+                df.toPandas().to_json(orient='records', lines=True),
+                content_type='application/json'
+            )
+            log_event("SUCCESS", f"Data saved to Cloud Storage at {json_file_path}", datasource, table)
+        else:
+            log_event("INFO", f"No new data found for {datasource}.{table}. Skipping file upload.", datasource, table)
 
         audit_timestamp = datetime.now(timezone.utc).astimezone(local_tz)
 

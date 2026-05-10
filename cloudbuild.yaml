@@ -1,0 +1,26 @@
+steps:
+  # Bước 1: Đồng bộ folder dags (bao gồm cả SQL) lên GCS của Composer
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'gsutil'
+      - '-m'
+      - 'rsync'
+      - '-d'
+      - '-r'
+      - 'dags/'
+      - 'gs://${_COMPOSER_BUCKET}/dags/'
+
+  # Bước 2: Đồng bộ folder src (chứa PySpark scripts) lên GCS của Dataproc
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'gsutil'
+      - '-m'
+      - 'rsync'
+      - '-d'
+      - '-r'
+      - 'src/'
+      - 'gs://${_COMPOSER_BUCKET}/scripts/'
+
+# Giải thích tham số:
+# -m: Chạy song song cho nhanh
+# rsync -d -r: Đồng bộ thư mục, xóa file ở GCS nếu ở Local đã xóa
