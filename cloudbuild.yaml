@@ -1,15 +1,13 @@
 steps:
-  # 1. Cài đặt môi trường để Test (Validation)
+  # 1. Cài đặt và Validate trong cùng 1 step để đảm bảo có thư viện
   - name: 'python:3.11'
-    id: 'Install Dependencies'
-    entrypoint: pip
-    args: ['install', '-r', 'requirements.txt']
-
-  # 2. Bước VALIDATE: Chạy unit test kiểm tra cú pháp DAG (Mục 3 & 4 trong Assignment)
-  - name: 'python:3.11'
-    id: 'Validate DAGs'
-    entrypoint: bash
-    args: ['scripts/validate_dag.sh']
+    id: 'Install and Validate'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        pip install -r requirements.txt
+        bash scripts/validate_dag.sh
 
   # 3. Bước DEPLOY: Nếu validate pass, thực hiện đồng bộ lên GCS (Mục 2 & 3 trong Assignment)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
