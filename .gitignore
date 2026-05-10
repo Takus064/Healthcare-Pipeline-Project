@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+Assignment 02.md
 
 # Jupyter
 .ipynb_checkpoints/

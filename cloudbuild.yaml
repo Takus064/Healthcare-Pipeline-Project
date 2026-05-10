@@ -1,26 +1,40 @@
 steps:
-  # Bước 1: Đồng bộ folder dags (bao gồm cả SQL) lên GCS của Composer
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    args:
-      - 'gsutil'
-      - '-m'
-      - 'rsync'
-      - '-d'
-      - '-r'
-      - 'dags/'
-      - 'gs://${_COMPOSER_BUCKET}/dags/'
+  # 1. Cài đặt môi trường để Test (Validation)
+  - name: 'python:3.11'
+    id: 'Install Dependencies'
+    entrypoint: pip
+    args: ['install', '-r', 'requirements.txt']
 
-  # Bước 2: Đồng bộ folder src (chứa PySpark scripts) lên GCS của Dataproc
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    args:
-      - 'gsutil'
-      - '-m'
-      - 'rsync'
-      - '-d'
-      - '-r'
-      - 'src/'
-      - 'gs://${_COMPOSER_BUCKET}/data/'
+  # 2. Bước VALIDATE: Chạy unit test kiểm tra cú pháp DAG (Mục 3 & 4 trong Assignment)
+  - name: 'python:3.11'
+    id: 'Validate DAGs'
+    entrypoint: bash
+    args: ['scripts/validate_dag.sh']
 
-# Giải thích tham số:
-# -m: Chạy song song cho nhanh
-# rsync -d -r: Đồng bộ thư mục, xóa file ở GCS nếu ở Local đã xóa
+  # 3. Bước DEPLOY: Nếu validate pass, thực hiện đồng bộ lên GCS (Mục 2 & 3 trong Assignment)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'Deploy to GCS'
+    entrypoint: 'bash'
+    args: ['scripts/deploy_dag.sh']
+    env:
+      - '_COMPOSER_BUCKET=${_COMPOSER_BUCKET}'
+
+  # 4. Bước TRIGGER: Tự động chạy lại DAG sau khi deploy thành công (Mục 3 trong Assignment)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'Trigger Airflow DAG'
+    entrypoint: 'bash'
+    args: ['scripts/trigger_dag.sh']
+    env:
+      - '_COMPOSER_ENV_NAME=${_COMPOSER_ENV_NAME}'
+      - '_LOCATION=${_LOCATION}'
+      - '_DAG_ID=healthcare_etl_pipeline'
+
+# Cấu hình log lưu vào Cloud Storage (tùy chọn)
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+# Biến thay thế (Substitution variables) - Bạn cần cấu hình các biến này trên Cloud Build Trigger
+substitutions:
+  _COMPOSER_BUCKET: 'asia-southeast1-healthcare--c5ed87e7-bucket'
+  _COMPOSER_ENV_NAME: 'healthcare-composer-env' # Tên môi trường Composer của bạn
+  _LOCATION: 'asia-southeast1'
