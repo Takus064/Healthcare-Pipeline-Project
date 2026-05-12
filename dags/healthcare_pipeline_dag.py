@@ -12,6 +12,7 @@ cluster_name = 'healthcare-cluster'
 composer_bucket = 'asia-southeast1-healthcare--c5ed87e7-bucket'
 
 gcs_job_hospital_to_landing = f'gs://{composer_bucket}/data/ingestion/hospital_to_landing.py'
+gcs_npi_validation_pipeline = f'gs://{composer_bucket}/data/ingestion/npi_validation_pipeline.py'
 gcs_job_claim_to_bronze = f'gs://{composer_bucket}/data/bronze/claim_to_bronze.py'
 gcs_job_cpt_codes_to_bronze = f'gs://{composer_bucket}/data/bronze/cpt_codes_to_bronze.py'
 
@@ -22,23 +23,26 @@ def pyspark_job(main_python_file_uri: str) -> dict:
         'pyspark_job': {
             'main_python_file_uri': main_python_file_uri,
             'properties': {
-                # Giới hạn bộ nhớ Driver và Executor xuống mức thấp nhất
-                'spark.driver.memory': '512m',
-                'spark.executor.memory': '512m',
+                # Cân bằng lại: 1g là mức tối thiểu an toàn cho cụm yếu
+                'spark.driver.memory': '1g',
+                'spark.executor.memory': '1g',
                 'spark.executor.cores': '1',
                 'spark.executor.instances': '1',
-                # Tắt tự động cấp phát tài nguyên để tránh tranh chấp
-                'spark.dynamicAllocation.enabled': 'false',
-                # Nếu cụm cực yếu, ép chạy ở chế độ local ngay trên Master node
-                'spark.master': 'local[*]' 
+                # Bật Dynamic Allocation để linh hoạt hơn
+                'spark.dynamicAllocation.enabled': 'true',
+                'spark.dynamicAllocation.initialExecutors': '1',
+                'spark.dynamicAllocation.minExecutors': '1',
+                'spark.dynamicAllocation.maxExecutors': '2'
             }
         }
     }
 
 
+
 pyspark_job_hospital_to_landing = pyspark_job(gcs_job_hospital_to_landing)
 pyspark_job_claim_to_bronze = pyspark_job(gcs_job_claim_to_bronze)
 pyspark_job_cpt_codes_to_bronze = pyspark_job(gcs_job_cpt_codes_to_bronze)
+pyspark_job_npi_validation = pyspark_job(gcs_npi_validation_pipeline)
 
 default_args = {
     'owner': 'LongNN28',
@@ -75,6 +79,13 @@ with DAG(
     pyspark_cpt_codes_to_bronze = DataprocSubmitJobOperator(
         task_id = 'pyspark_cpt_codes_to_bronze',
         job = pyspark_job_cpt_codes_to_bronze,
+        region = region,
+        project_id = project_id
+    )
+
+    pyspark_npi_validation_task = DataprocSubmitJobOperator(
+        task_id = 'pyspark_npi_validation',
+        job = pyspark_job_npi_validation,
         region = region,
         project_id = project_id
     )
@@ -230,8 +241,8 @@ with DAG(
     )
 
     # --- DEPENDENCIES ---
-    start_cluster >> pyspark_hospital_to_landing
-    pyspark_hospital_to_landing >> [pyspark_claim_to_bronze, pyspark_cpt_codes_to_bronze]
+    start_cluster >> pyspark_hospital_to_landing >> pyspark_npi_validation_task
+    pyspark_npi_validation_task >> [pyspark_claim_to_bronze, pyspark_cpt_codes_to_bronze]
     [pyspark_claim_to_bronze, pyspark_cpt_codes_to_bronze] >> silver_01_dept
     
     silver_01_dept >> silver_02_cpt_codes >> silver_03_claim_data >> silver_04_providers >> \
