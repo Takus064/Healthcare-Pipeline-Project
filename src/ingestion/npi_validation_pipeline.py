@@ -116,7 +116,7 @@ def process_npi_partition(rows):
     rows_list = list(rows)
     
     def fetch_data(row):
-        npi = row.npi_id
+        npi = str(row.npi_id) if row.npi_id else None
         default_return = (npi, False, None, None, None, None, None, None, None)
         if not npi: return default_return
         
@@ -181,8 +181,9 @@ def main():
     # Chuyển qua RDD để dùng mapPartitions
     rdd_enriched = distinct_npi.rdd.mapPartitions(process_npi_partition)
     
-    # Tạo Schema mới bao gồm npi_id_key để map
-    schema_with_key = npi_api_schema.add("npi_id_key", StringType(), False)
+    # Tạo Schema mới bao gồm npi_id_key ở ĐẦU để khớp với tuple trả về từ mapPartitions (npi, npi_found, ...)
+    schema_fields = [StructField("npi_id_key", StringType(), False)] + npi_api_schema.fields
+    schema_with_key = StructType(schema_fields)
     enriched_df = spark.createDataFrame(rdd_enriched, schema=schema_with_key)
     enriched_df = enriched_df.withColumnRenamed("npi_id_key", "npi_id")
     
